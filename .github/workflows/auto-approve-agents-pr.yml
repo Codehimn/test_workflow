@@ -1,8 +1,15 @@
-name: Auto-approve & Auto-merge (codex only)
+name: Auto-approve & Auto-merge (reusable)
 
 on:
-  pull_request:
-    types: [opened, reopened, synchronize, labeled]
+  workflow_call:
+    inputs:
+      label:
+        type: string
+        required: false
+        default: codex
+    secrets:
+      token:
+        required: false
 
 permissions:
   contents: write
@@ -10,13 +17,15 @@ permissions:
 
 jobs:
   auto_approve:
-    if: contains(github.event.pull_request.labels.*.name, 'codex')
+    if: contains(github.event.pull_request.labels.*.name, inputs.label)
     runs-on: ubuntu-latest
     steps:
       - name: Auto-approve PR
         uses: hmarr/auto-approve-action@v4
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}  
+          # En workflows reutilizables NO uses secrets.GITHUB_TOKEN.
+          # Usa github.token, o un secret pasado como "token".
+          github-token: ${{ secrets.token || github.token }}
 
   enable_auto_merge:
     needs: auto_approve
@@ -26,6 +35,6 @@ jobs:
       - name: Enable Auto-Merge (squash)
         uses: peter-evans/enable-pull-request-automerge@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.token || github.token }}
           pull-request-number: ${{ github.event.pull_request.number }}
           merge-method: squash
