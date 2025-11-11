@@ -7,6 +7,10 @@ on:
         type: string
         required: false
         default: codex
+      bot_login:
+        type: string
+        required: false
+        default: google-labs-jules[bot]
     secrets:
       token:
         required: false
@@ -17,14 +21,16 @@ permissions:
 
 jobs:
   auto_approve:
-    if: contains(github.event.pull_request.labels.*.name, inputs.label)
+    # Corre si tiene la etiqueta indicada O si el autor del PR es el bot
+    if: >
+      (github.event_name == 'pull_request' || github.event_name == 'pull_request_target') &&
+      (contains(github.event.pull_request.labels.*.name, inputs.label) ||
+       github.event.pull_request.user.login == inputs.bot_login)
     runs-on: ubuntu-latest
     steps:
       - name: Auto-approve PR
         uses: hmarr/auto-approve-action@v4
         with:
-          # En workflows reutilizables NO uses secrets.GITHUB_TOKEN.
-          # Usa github.token, o un secret pasado como "token".
           github-token: ${{ secrets.token || github.token }}
 
   enable_auto_merge:
